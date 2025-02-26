@@ -1,0 +1,253 @@
+from collections import defaultdict
+
+def compute_first():
+    while True:
+        changed = False
+        for nt in rules:
+            for prod in rules[nt]:
+                tokens = prod.split()
+                temp = set()
+
+                for tok in tokens:
+                    temp.update(first[tok])
+                    if "ε" not in first[tok]:  
+                        break
+                else:
+                    temp.add("ε")
+
+                if temp - first[nt]:  
+                    first[nt].update(temp)
+                    changed = True
+        if not changed:
+            break
+
+def compute_follow():
+    follow[start_symbol].add("$")
+    
+    while True:
+        changed = False
+        for nt in rules:
+            for prod in rules[nt]:
+                tokens = prod.split()
+                for i, tok in enumerate(tokens):
+                    if tok in rules:
+                        temp = set()
+                        for next_tok in tokens[i+1:]:
+                            temp.update(first[next_tok])
+                            if "ε" not in first[next_tok]:
+                                break
+                        else:
+                            temp.update(follow[nt])
+                        
+                        temp.discard("ε")
+                        if temp - follow[tok]:  
+                            follow[tok].update(temp)
+                            changed = True
+        if not changed:
+            break
+
+def build_parsing_table():
+    for nt in rules:
+        for prod in rules[nt]:
+            tokens = prod.split()
+            first_set = set()
+            
+            for tok in tokens:
+                first_set.update(first[tok])
+                if "ε" not in first[tok]:
+                    break
+            else:
+                first_set.add("ε")
+
+            for terminal in first_set - {"ε"}:
+                parsing_table[nt][terminal] = prod
+            
+            if "ε" in first_set:
+                for terminal in follow[nt]:
+                    parsing_table[nt][terminal] = "ε"
+
+def print_parsing_table():
+    print("\nLL(1) Parsing Table:")
+    print("-" * (20 + len(terminals) * 15))
+    print(f"{'Non-Terminal':<20}", end="")
+    for term in terminals:
+        print(f"{term:<15}", end="")
+    print("\n" + "-" * (20 + len(terminals) * 15))
+
+    for nt in non_terminals:
+        print(f"{nt:<20}", end="")
+        for term in terminals:
+            print(f"{parsing_table[nt].get(term, ''):<15}", end="")
+        print()
+    print("-" * (20 + len(terminals) * 15))
+
+def parse_string(input_string):
+    stack = [start_symbol, "$"]
+    input_string += " $"
+    tokens = input_string.split()
+
+    print("\nParsing Steps:")
+    print("-" * 50)
+    print(f"{'Stack':<20}{'Input':<20}{'Action'}")
+    print("-" * 50)
+
+    index = 0
+    while stack:
+        top = stack[-1]
+        current_token = tokens[index]
+
+        print(f"{' '.join(stack):<20}{' '.join(tokens[index:]):<20}", end="")
+
+        if top == current_token:  
+            stack.pop()
+            index += 1
+            print(f"Match {current_token}")
+        elif top in parsing_table and current_token in parsing_table[top]:  
+            stack.pop()
+            production = parsing_table[top][current_token]
+            if production != "ε":
+                stack.extend(reversed(production.split()))
+            print(f"Apply {top} -> {production}")
+        else:  
+            print("Error! String rejected.")
+            print("\n❌ Invalid String! It does NOT belong to the grammar.")
+            return False
+
+    if stack == ["$"] and index == len(tokens) - 1:
+        print("\n✅ Valid String! It belongs to the grammar.")
+        return True
+    else:
+        print("\n❌ Invalid String! It does NOT belong to the grammar.")
+        return False
+
+# ---------- Main Program ---------- #
+
+rules = defaultdict(list)
+first = defaultdict(set)
+follow = defaultdict(set)
+parsing_table = defaultdict(dict)
+
+# User Inputs
+terminals = input("Enter terminals (space-separated): ").split()
+non_terminals = input("Enter non-terminals (space-separated): ").split()
+start_symbol = non_terminals[0]
+
+print("Enter productions (format: A -> alpha | beta), type 'done' to stop:")
+while True:
+    inp = input().strip()
+    if inp.lower() == "done":
+        break
+    head, body = inp.split("->")
+    rules[head.strip()] = [p.strip() for p in body.split("|")]
+
+# Initialize FIRST sets
+for t in terminals:
+    first[t] = {t}
+for nt in non_terminals:
+    first[nt] = set()
+
+compute_first()
+compute_follow()
+build_parsing_table()
+print_parsing_table()
+
+# Parsing Input String
+input_string = input("\nEnter input string to parse: ")
+parse_string(input_string)
+
+
+
+
+
+---------------------------------------------------------------------------------------------
+
+
+
+FF:
+
+from collections import defaultdict
+
+def compute_first():
+    while True:
+        changed = False
+        for nt in rules:
+            for prod in rules[nt]:
+                tokens = prod.split()
+                temp = set()
+
+                for tok in tokens:
+                    temp.update(first[tok])
+                    if "ε" not in first[tok]:  # Stop if no epsilon
+                        break
+                else:
+                    temp.add("ε")
+
+                if temp - first[nt]:  # If new elements found
+                    first[nt].update(temp)
+                    changed = True
+        if not changed:
+            break
+
+def compute_follow():
+    follow[start_symbol].add("$")
+    
+    while True:
+        changed = False
+        for nt in rules:
+            for prod in rules[nt]:
+                tokens = prod.split()
+                for i, tok in enumerate(tokens):
+                    if tok in rules:
+                        temp = set()
+                        for next_tok in tokens[i+1:]:
+                            temp.update(first[next_tok])
+                            if "ε" not in first[next_tok]:
+                                break
+                        else:
+                            temp.update(follow[nt])
+                        
+                        temp.discard("ε")
+                        if temp - follow[tok]:  # If new elements found
+                            follow[tok].update(temp)
+                            changed = True
+        if not changed:
+            break
+
+def display_results():
+    print("\nFIRST Sets:")
+    for nt in rules:
+        print(f"{nt}: {sorted(first[nt])}")
+    
+    print("\nFOLLOW Sets:")
+    for nt in rules:
+        print(f"{nt}: {sorted(follow[nt])}")
+
+# ---------- Main Program ---------- #
+
+rules = defaultdict(list)
+first = defaultdict(set)
+follow = defaultdict(set)
+
+# User Inputs
+terminals = input("Enter terminals (space-separated): ").split()
+non_terminals = input("Enter non-terminals (space-separated): ").split()
+start_symbol = non_terminals[0]
+
+print("Enter productions (format: A -> alpha | beta), type 'done' to stop:")
+while True:
+    inp = input().strip()
+    if inp.lower() == "done":
+        break
+    head, body = inp.split("->")
+    rules[head.strip()] = [p.strip() for p in body.split("|")]
+
+# Initialize FIRST sets
+for t in terminals:
+    first[t] = {t}
+for nt in non_terminals:
+    first[nt] = set()
+
+compute_first()
+compute_follow()
+display_results()
+
